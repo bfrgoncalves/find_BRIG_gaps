@@ -33,7 +33,7 @@ Arguments:
 # Example of usage
 
 
-`find_brig_gaps.py -x queryScratchFile.tab -ib 200000 -ie 250000 -s 1000 -f referenceGenome.fasta -o results.txt`
+`find_brig_gaps.py -x queryScratchFile.tab -ib 200000 -ie 250000 -s 1000 -f referenceGenome.fasta -o results`
 
 
 
