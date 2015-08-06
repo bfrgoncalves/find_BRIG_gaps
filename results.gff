@@ -1,0 +1,8 @@
+##gff
+##dataFROM_find_brig_gaps_@bfrgoncalves
+Bacillus_invictae_NG-7222_PACBIO.fasta	RefSeq	region	2975204	2978152	.	.	.	ID=gap1;Name=Gap1_2948
+Bacillus_invictae_NG-7222_PACBIO.fasta	RefSeq	region	2978271	2979567	.	.	.	ID=gap2;Name=Gap2_1296
+Bacillus_invictae_NG-7222_PACBIO.fasta	RefSeq	region	2979622	2992946	.	.	.	ID=gap3;Name=Gap3_13324
+Bacillus_invictae_NG-7222_PACBIO.fasta	RefSeq	region	2992976	3002427	.	.	.	ID=gap4;Name=Gap4_9451
+Bacillus_invictae_NG-7222_PACBIO.fasta	RefSeq	region	3002482	3003337	.	.	.	ID=gap5;Name=Gap5_855
+Bacillus_invictae_NG-7222_PACBIO.fasta	RefSeq	region	3042717	3043926	.	.	.	ID=gap6;Name=Gap6_1209

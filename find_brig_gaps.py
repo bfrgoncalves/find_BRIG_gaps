@@ -42,7 +42,7 @@ def main():
 
 	print 
 	
-	writeGapFile(args.o, gapArray)
+	writeGapFiles(args.o, gapArray, args.f)
 
 	print 'Gaps: ' + str(gaps) + '\n'
 
@@ -126,11 +126,20 @@ def getGapSequence(fastaFile, gaps):
 
 	return newGapFile, len(wholeSequence)
 
-def writeGapFile(fileName, gapArray):
+def writeGapFiles(fileName, gapArray, fastaName):
 
-	with open(fileName, 'w') as gapFile:
+	with open(fileName+'.fasta', 'w') as gapFile:
 		for i in gapArray:
 			gapFile.write('>region_' + str(i[0]) + '_gapLength_' + str(int(float(i[1]))) + '\n' + i[2] + '\n')
+
+
+	with open(fileName+'.gff', 'w') as gapFile:
+		gapFile.write('##gff\n##dataFROM_find_brig_gaps_@bfrgoncalves\n')
+		fastaName = os.path.basename(fastaName)
+		countGaps = 0
+		for i in gapArray:
+			countGaps += 1
+			gapFile.write(fastaName + '\tRefSeq\tregion\t' + str(int(float(i[0].split('--')[0]))) +'\t' + str(int(float(i[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=gap' + str(countGaps) + ';Name=Gap' + str(countGaps) + '_' + str(int(i[1])) + '\n')
 
 
 

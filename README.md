@@ -6,7 +6,7 @@
 
 # Description 
 
-This program searches for alignment gaps in the scratch .tab files given as output of the BRIG software. BLAST hits on those files are ordered and then regions from the reference without coverage are classified as Gaps.
+This program searches for alignment gaps in the scratch .tab files given as output of the BRIG software. BLAST hits on those files are ordered and then regions from the reference without coverage are classified as Gaps. It returns two files, one .fasta with the gap sequences and one .gff with the coordinates in the reference.
 
 Arguments:
  
@@ -28,7 +28,7 @@ Arguments:
   			.fasta file with the reference sequence to retrieve the gap sequences
 
   -o RESULTSFILENAME (Required = True)
-  			Name to give to the results file
+  			Name to give to the results files (.fasta and .gff)
 
 # Example of usage
 
