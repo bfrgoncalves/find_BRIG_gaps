@@ -22,6 +22,7 @@ def main():
 	parser.add_argument('-ie', nargs='?', type=str, help="interval end", required=True)
 	parser.add_argument('-s', nargs='?', type=str, help="sensitivity", required=True)
 	parser.add_argument('-f', nargs='?', type=str, help="fasta from sequences used as reference on BRIG", required=True)
+	parser.add_argument('-a', nargs='?', type=str, help=".gff file to change", required=False)
 	parser.add_argument('-o', nargs='?', type=str, help="results folder", required=True)
 
 
@@ -43,6 +44,9 @@ def main():
 	print 
 	
 	writeGapFiles(args.o, gapArray, args.f)
+
+	if args.a:
+		changeGff(args.a, gapArray)
 
 	print 'Gaps: ' + str(gaps) + '\n'
 
@@ -140,6 +144,37 @@ def writeGapFiles(fileName, gapArray, fastaName):
 		for i in gapArray:
 			countGaps += 1
 			gapFile.write(fastaName + '\tRefSeq\tregion\t' + str(int(float(i[0].split('--')[0]))) +'\t' + str(int(float(i[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=gap' + str(countGaps) + ';Name=Gap' + str(countGaps) + '_' + str(int(i[1])) + '\n')
+
+def changeGff(gffFile, gapArray):
+	
+	gffBasename = os.path.basename(gffFile)
+	gffName = os.path.splitext(gffBasename)
+	currentGapArray = gapArray
+	countGaps = 0
+	firstTime = True
+	
+	with open(gffFile, 'r') as gff:
+		with open(gffName[0]+'_plusGAPS.gff', 'w') as gapFile:
+			for i in gff:
+				if '#' not in i:
+					if firstTime:
+						sequenceName = i.split('\t')[0]
+						firstTime = False
+					gffBegin = float(i.split('\t')[3])
+					if not currentGapArray:
+						gapFile.write(i)
+					else:
+						currentGap = currentGapArray[0]
+						nextGapBegin = float(currentGap[0].split('--')[0])
+						if nextGapBegin > gffBegin:
+							gapFile.write(i)
+						else:
+							countGaps += 1
+							gapFile.write(sequenceName + '\tRefSeq\tregion\t' + str(int(float(currentGap[0].split('--')[0]))) +'\t' + str(int(float(currentGap[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=gap' + str(countGaps) + ';Name=Gap' + str(countGaps) + '_' + str(int(currentGap[1])) + '\n')
+							currentGapArray.pop(0)
+
+				else:
+					gapFile.write(i)
 
 
 
