@@ -17,7 +17,7 @@ import HTSeq
 def main():
 
 	parser = argparse.ArgumentParser(description="This program finds the gaps of a query genome after the alignment againsta reference using BRIG software.")
-	parser.add_argument('-x', nargs='?', type=str, help="query .tab file", required=True)
+	parser.add_argument('-x', nargs='?', type=str, help="query .tab file from BRIG scratch folder", required=True)
 	parser.add_argument('-ib', nargs='?', type=str, help="interval begin", required=True)
 	parser.add_argument('-ie', nargs='?', type=str, help="interval end", required=True)
 	parser.add_argument('-s', nargs='?', type=str, help="sensitivity", required=True)
@@ -30,14 +30,22 @@ def main():
 
 	LineDict, arrayOfLines = importTsv(args.x, '\t')
 
+	print
+
 	orderedTab = orderTsv(LineDict, arrayOfLines)
 
-	gaps = getGaps(orderedTab, args.ib, args.ie, args.s)
+	gaps, totalCoveredZone = getGaps(orderedTab, args.ib, args.ie, args.s)
 
-	gapArray = getGapSequence(args.f, gaps)
+	gapArray, wholeSequenceSize = getGapSequence(args.f, gaps)
+
+	print 'Coverage percentage: ' + str((float(totalCoveredZone)/float(wholeSequenceSize)) * 100) + '%'
+
+	print 
+	
 	writeGapFile(args.o, gapArray)
 
-	print gaps
+	print 'Gaps: ' + str(gaps) + '\n'
+
 
 
 def importTsv(fileName, delimiter):
@@ -77,6 +85,8 @@ def getGaps(orderedTab, Ibegin, Iend, sense):
 
 	gaps = []
 	coveredRegion = 0
+	totalCoveredZone = 0
+	totalGapSize = 0
 
 	for i in range(0, len(orderedTab)-2):
 		gap = orderedTab[i][1] - coveredRegion
@@ -86,13 +96,16 @@ def getGaps(orderedTab, Ibegin, Iend, sense):
 				gaps.append((str(coveredRegion) + '--' + str(coveredRegion + gap), gap))
 
 		if gap > 0:
+			totalGapSize += gap
 			if gap + orderedTab[i][2] > coveredRegion:
-				coveredRegion += (gap + orderedTab[i][2] - coveredRegion)
+				coveredRegion += (gap + (orderedTab[i][2] - (gap + coveredRegion)))
 		elif orderedTab[i][2] - coveredRegion > 0:
 			coveredRegion += orderedTab[i][2] - coveredRegion
+	
+	totalCoveredZone += coveredRegion - totalGapSize
 
-	print coveredRegion
-	return gaps
+	print 'Covered Region: ' + str(int(totalCoveredZone)) + ' bp'
+	return gaps, totalCoveredZone
 
 
 def getGapSequence(fastaFile, gaps):
@@ -103,13 +116,15 @@ def getGapSequence(fastaFile, gaps):
 	for allele in gene_fp:
 		wholeSequence += allele.seq
 
+	print 'Reference Size: ' + str(len(wholeSequence)) + ' bp'
+
 	for i in gaps:
 		begin = float(i[0].split('--')[0])
 		end = float(i[0].split('--')[1])
 		seqToExtract = wholeSequence[int(begin):int(end)]
 		newGapFile.append((i[0],i[1],seqToExtract))
 
-	return newGapFile
+	return newGapFile, len(wholeSequence)
 
 def writeGapFile(fileName, gapArray):
 
