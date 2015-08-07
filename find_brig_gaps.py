@@ -16,11 +16,12 @@ import HTSeq
 
 def main():
 
-	parser = argparse.ArgumentParser(description="This program finds the gaps of a query genome after the alignment againsta reference using BRIG software.")
-	parser.add_argument('-x', nargs='?', type=str, help="query .tab file from BRIG scratch folder", required=True)
+	parser = argparse.ArgumentParser(description="This program finds the gaps of a query genome after the alignment against a reference using BRIG software.")
+	parser.add_argument('-x', nargs='?', type=str, help="query .tab file from BRIG scratch folder/folder with .tab scratch files", required=True)
 	parser.add_argument('-ib', nargs='?', type=str, help="interval begin", required=True)
 	parser.add_argument('-ie', nargs='?', type=str, help="interval end", required=True)
 	parser.add_argument('-s', nargs='?', type=str, help="sensitivity", required=True)
+	parser.add_argument('-n', nargs='?', type=str, help="Gaps name", required=True)
 	parser.add_argument('-f', nargs='?', type=str, help="fasta from sequences used as reference on BRIG", required=True)
 	parser.add_argument('-a', nargs='?', type=str, help=".gff file to change", required=False)
 	parser.add_argument('-o', nargs='?', type=str, help="results folder", required=True)
@@ -28,25 +29,42 @@ def main():
 
 	args = parser.parse_args()
 
+	if os.path.isdir(args.x):
+		onlyfiles = [ f for f in listdir(args.x) if isfile(join(args.x,f)) ]
+		if args.a:
+			gffFile = args.a
+			gffBasename = os.path.basename(gffFile)
+			gffName = os.path.splitext(gffBasename)
+		for i in onlyfiles:
+			gapName = os.path.splitext(i)[0] + '_Gap'
+			resultsFileName = args.o + '_' + os.path.splitext(i)[0]
+			runPipeline(os.path.join(args.x,i), args.ib, args.ie, args.s, gapName, args.f, gffFile, resultsFileName, True)
 
-	LineDict, arrayOfLines = importTsv(args.x, '\t')
+		if args.a:
+			os.rename(gffName[0]+'_inter.gff', gffName[0]+'_plusGAPS.gff')
+	else:
+		runPipeline(args.x, args.ib, args.ie, args.s, args.n, args.f, args.a, args.o, False)
 
+
+def runPipeline(x, ib, ie, s, n, f, a, o, overwrite):
+
+	LineDict, arrayOfLines = importTsv(x, '\t')
 	print
-
 	orderedTab = orderTsv(LineDict, arrayOfLines)
-
-	gaps, totalCoveredZone = getGaps(orderedTab, args.ib, args.ie, args.s)
-
-	gapArray, wholeSequenceSize = getGapSequence(args.f, gaps)
-
+	gaps, totalCoveredZone = getGaps(orderedTab, ib, ie, s)
+	gapArray, wholeSequenceSize = getGapSequence(f, gaps)
 	print 'Coverage percentage: ' + str((float(totalCoveredZone)/float(wholeSequenceSize)) * 100) + '%'
-
 	print 
 	
-	writeGapFiles(args.o, gapArray, args.f)
+	if n:
+		gapName = n
+	else:
+		gapName = 'Gap'
+	
+	writeGapFiles(o, gapArray, f, gapName)
 
-	if args.a:
-		changeGff(args.a, gapArray)
+	if a:
+		changeGff(a, gapArray, gapName, overwrite)
 
 	print 'Gaps: ' + str(gaps) + '\n'
 
@@ -130,7 +148,7 @@ def getGapSequence(fastaFile, gaps):
 
 	return newGapFile, len(wholeSequence)
 
-def writeGapFiles(fileName, gapArray, fastaName):
+def writeGapFiles(fileName, gapArray, fastaName, gapName):
 
 	with open(fileName+'.fasta', 'w') as gapFile:
 		for i in gapArray:
@@ -143,15 +161,19 @@ def writeGapFiles(fileName, gapArray, fastaName):
 		countGaps = 0
 		for i in gapArray:
 			countGaps += 1
-			gapFile.write(fastaName + '\tRefSeq\tregion\t' + str(int(float(i[0].split('--')[0]))) +'\t' + str(int(float(i[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=gap' + str(countGaps) + ';Name=Gap' + str(countGaps) + '_' + str(int(i[1])) + '\n')
+			gapFile.write(fastaName + '\tRefSeq\tgap\t' + str(int(float(i[0].split('--')[0]))) +'\t' + str(int(float(i[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=' + gapName + str(countGaps) + ';Name=' + gapName + str(countGaps) + '_' + str(int(i[1])) + '\n')
 
-def changeGff(gffFile, gapArray):
+
+def changeGff(gffFile, gapArray, gapName, overwrite):
 	
 	gffBasename = os.path.basename(gffFile)
 	gffName = os.path.splitext(gffBasename)
 	currentGapArray = gapArray
 	countGaps = 0
 	firstTime = True
+
+	if os.path.isfile(gffName[0]+'_inter.gff'):
+		gffFile = gffName[0] + '_inter.gff'
 	
 	with open(gffFile, 'r') as gff:
 		with open(gffName[0]+'_plusGAPS.gff', 'w') as gapFile:
@@ -160,7 +182,11 @@ def changeGff(gffFile, gapArray):
 					if firstTime:
 						sequenceName = i.split('\t')[0]
 						firstTime = False
-					gffBegin = float(i.split('\t')[3])
+					try:
+						gffBegin = float(i.split('\t')[3])
+					except IndexError:
+						gapFile.write(i)
+						continue
 					if not currentGapArray:
 						gapFile.write(i)
 					else:
@@ -170,12 +196,18 @@ def changeGff(gffFile, gapArray):
 							gapFile.write(i)
 						else:
 							countGaps += 1
-							gapFile.write(sequenceName + '\tRefSeq\tregion\t' + str(int(float(currentGap[0].split('--')[0]))) +'\t' + str(int(float(currentGap[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=gap' + str(countGaps) + ';Name=Gap' + str(countGaps) + '_' + str(int(currentGap[1])) + '\n')
+							gapFile.write(sequenceName + '\tRefSeq\tgap\t' + str(int(float(currentGap[0].split('--')[0]))) +'\t' + str(int(float(currentGap[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=' + gapName + str(countGaps) + ';Name=' + gapName + str(countGaps) + '_' + str(int(currentGap[1])) + '\n')
 							currentGapArray.pop(0)
 
 				else:
 					gapFile.write(i)
 
+	if overwrite:
+		if os.path.isfile(gffName[0]+'_inter.gff'):
+			os.remove(gffName[0]+'_inter.gff')
+			os.rename(gffName[0]+'_plusGAPS.gff', gffName[0]+'_inter.gff')
+		else:
+			os.rename(gffName[0]+'_plusGAPS.gff', gffName[0]+'_inter.gff')
 
 
 if __name__ == "__main__":

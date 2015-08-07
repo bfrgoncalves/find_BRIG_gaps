@@ -25,28 +25,31 @@ def main():
 
 	args = parser.parse_args()
 
+	BLAST_to_BRIG(args.x, args.o)
+
 
 def BLAST_to_BRIG(BLASTfile, resultsFile):
 
-	rec = open(bOutFile)
+	rec = open(BLASTfile)
 	blast_records = NCBIXML.parse(rec)
 
 	with open(resultsFile, 'w') as tabFile: 
 	
 		for blast_record in blast_records:
-			bestmatchArray[str(blast_record.query)] = []
-			
+		
 			for alignment in blast_record.alignments:
 				for match in alignment.hsps:
-					tabFile.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' % 
-								str(blast_record.query),
-								str(alignment.hit_def),
-								str(match.identities),
-								str(alignment.length),
-								str(match.query_start),
-								str(match.query_start + alignment.length),
-								str(match.sbjct_start),
-								str(match.query_start + alignment.length))
+					tabFile.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" % (
+								blast_record.query,
+								alignment.hit_def,
+								round(float(match.identities)/float(alignment.length),2),
+								int(match.score),
+								alignment.length,
+								int(alignment.length) - int(match.identities),
+								match.query_start,
+								(int(match.query_start) + int(alignment.length)),
+								match.sbjct_start,
+								(int(match.query_start) + int(alignment.length))))
 
 					break
 
