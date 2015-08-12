@@ -50,9 +50,11 @@ def runPipeline(x, ib, ie, s, n, f, a, o, overwrite):
 
 	LineDict, arrayOfLines = importTsv(x, '\t')
 	print
-	orderedTab = orderTsv(LineDict, arrayOfLines)
+	orderedTab = orderTsv(arrayOfLines)
+	#print orderedTab
 	gaps, totalCoveredZone = getGaps(orderedTab, ib, ie, s)
 	gapArray, wholeSequenceSize = getGapSequence(f, gaps)
+	#print gapArray
 	print 'Coverage percentage: ' + str((float(totalCoveredZone)/float(wholeSequenceSize)) * 100) + '%'
 	print 
 	
@@ -79,28 +81,47 @@ def importTsv(fileName, delimiter):
 		for line in csv.reader(tsvFile, delimiter = delimiter): #You can also use delimiter="\t" rather than giving a dialect.
 
 			if float(line[9]) < float(line[8]):
-				begin = line[9]
-				end = line[8]
+				contig_Align_begin = line[9]
+				contig_Align_end = line[8]
 				
 			else:
-				begin = line[8]
-				end = line[9]
+				contig_Align_begin = line[8]
+				contig_Align_end = line[9]
 
-			identifier = begin + '-' + end
+			referenceSplit = line[1].split(':')
+			reference = referenceSplit[0]
+			referenceBeginPlace = referenceSplit[1]
+			referenceEndPlace = referenceSplit[2]
+
+			identifier = referenceBeginPlace + '_' + referenceEndPlace + '_' + contig_Align_begin + '_' + contig_Align_end
 
 			if identifier not in arrayOfLines:
-				arrayOfLines.append((identifier, float(begin), float(end)))
+				arrayOfLines.append((reference, int(referenceBeginPlace), int(referenceEndPlace), identifier, int(contig_Align_begin), int(contig_Align_end)))
 				LineDict[identifier] = line
 
 
 	return LineDict, arrayOfLines
 
 
-def orderTsv(LineDict, arrayOfLines):
+def orderTsv(arrayOfLines):
+	newArrayOfLines = []
+	intermediaryArray = []
 
 	arrayOfLines = sorted(arrayOfLines, key=lambda tuple: tuple[1])
+
+	prevReference = ''
+	for i in arrayOfLines:
+		if prevReference == i[0]:
+			intermediaryArray.append(i)
+		else:
+			intermediaryArray = sorted(intermediaryArray, key=lambda tuple: tuple[4])
+			for j in intermediaryArray:
+				newArrayOfLines.append(j)
+			intermediaryArray = []
+			prevReference = i[0]
+			intermediaryArray.append(i)
 	
-	return arrayOfLines
+	return newArrayOfLines
 
 
 def getGaps(orderedTab, Ibegin, Iend, sense):
@@ -109,20 +130,31 @@ def getGaps(orderedTab, Ibegin, Iend, sense):
 	coveredRegion = 0
 	totalCoveredZone = 0
 	totalGapSize = 0
+	prevRefName = orderedTab[0][0]
+	prevContigEnd = orderedTab[0][2]
+	BeginOfContig = 0
 
 	for i in range(0, len(orderedTab)-2):
-		gap = orderedTab[i][1] - coveredRegion
+		if prevRefName != orderedTab[i][0]:
+			BeginOfContig = orderedTab[i][1]
+			prevRefName = orderedTab[i][0]
+			coveredRegion = prevContigEnd
+		else:
+			prevContigEnd = orderedTab[i][2]
+	
+		gap = BeginOfContig + orderedTab[i][4] - coveredRegion
 		#print gap
-		if float(Ibegin) <= orderedTab[i][1] and float(Iend) >= orderedTab[i][1]:
+		#print BeginOfContig, coveredRegion, gap
+		if float(Ibegin) <= coveredRegion and float(Iend) >= coveredRegion + gap:
 			if gap >= float(sense):
-				gaps.append((str(coveredRegion) + '--' + str(coveredRegion + gap), gap))
+				gaps.append((str(coveredRegion-BeginOfContig) + '--' + str(coveredRegion - BeginOfContig + gap), gap, orderedTab[i][0]))
 
 		if gap > 0:
 			totalGapSize += gap
-			if gap + orderedTab[i][2] > coveredRegion:
-				coveredRegion += (gap + (orderedTab[i][2] - (gap + coveredRegion)))
-		elif orderedTab[i][2] - coveredRegion > 0:
-			coveredRegion += orderedTab[i][2] - coveredRegion
+			if gap + BeginOfContig + orderedTab[i][5] > coveredRegion:
+				coveredRegion += (gap + (BeginOfContig + orderedTab[i][5] - (gap + coveredRegion)))
+		elif BeginOfContig + orderedTab[i][5] - coveredRegion > 0:
+			coveredRegion += BeginOfContig + orderedTab[i][5] - coveredRegion
 	
 	totalCoveredZone += coveredRegion - totalGapSize
 
@@ -133,18 +165,21 @@ def getGaps(orderedTab, Ibegin, Iend, sense):
 def getGapSequence(fastaFile, gaps):
 
 	gene_fp = HTSeq.FastaReader(fastaFile)
-	wholeSequence = ''
+	wholeSequence = {}
 	newGapFile = []
 	for allele in gene_fp:
-		wholeSequence += allele.seq
+		try:
+			wholeSequence[allele.name] += allele.seq
+		except KeyError:
+			wholeSequence[allele.name] = allele.seq
 
 	print 'Reference Size: ' + str(len(wholeSequence)) + ' bp'
 
 	for i in gaps:
 		begin = float(i[0].split('--')[0])
 		end = float(i[0].split('--')[1])
-		seqToExtract = wholeSequence[int(begin):int(end)]
-		newGapFile.append((i[0],i[1],seqToExtract))
+		seqToExtract = wholeSequence[i[2]][int(begin):int(end)]
+		newGapFile.append((i[0],i[1],seqToExtract, i[2]))
 
 	return newGapFile, len(wholeSequence)
 
@@ -152,7 +187,7 @@ def writeGapFiles(fileName, gapArray, fastaName, gapName):
 
 	with open(fileName+'.fasta', 'w') as gapFile:
 		for i in gapArray:
-			gapFile.write('>region_' + str(i[0]) + '_gapLength_' + str(int(float(i[1]))) + '\n' + i[2] + '\n')
+			gapFile.write('>region_' + str(i[3]) + '_' + str(i[0]) + '_gapLength_' + str(int(float(i[1]))) + '\n' + i[2] + '\n')
 
 
 	with open(fileName+'.gff', 'w') as gapFile:
@@ -161,7 +196,7 @@ def writeGapFiles(fileName, gapArray, fastaName, gapName):
 		countGaps = 0
 		for i in gapArray:
 			countGaps += 1
-			gapFile.write(fastaName + '\tRefSeq\tgap\t' + str(int(float(i[0].split('--')[0]))) +'\t' + str(int(float(i[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=' + gapName + str(countGaps) + ';Name=' + gapName + str(countGaps) + '_' + str(int(i[1])) + '\n')
+			gapFile.write(i[3] + '\tRefSeq\tgap\t' + str(int(float(i[0].split('--')[0]))) +'\t' + str(int(float(i[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=' + gapName + str(countGaps) + ';Name=' + gapName + str(countGaps) + '_' + str(int(i[1])) + '\n')
 
 
 def changeGff(gffFile, gapArray, gapName, overwrite):
@@ -193,11 +228,12 @@ def changeGff(gffFile, gapArray, gapName, overwrite):
 					else:
 						currentGap = currentGapArray[0]
 						nextGapBegin = float(currentGap[0].split('--')[0])
-						if nextGapBegin > gffBegin:
+
+						if nextGapBegin > gffBegin or referenceName != currentGap[3]:
 							gapFile.write(i)
 						else:
 							countGaps += 1
-							gapFile.write(sequenceName + '\tRefSeq\tgap\t' + str(int(float(currentGap[0].split('--')[0]))) +'\t' + str(int(float(currentGap[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=' + gapName + str(countGaps) + ';Name=' + gapName + str(countGaps) + '_' + str(int(currentGap[1])) + '\n')
+							gapFile.write(currentGap[3] + '\tRefSeq\tgap\t' + str(int(float(currentGap[0].split('--')[0]))) +'\t' + str(int(float(currentGap[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=' + gapName + str(countGaps) + ';Name=' + gapName + str(countGaps) + '_' + str(int(currentGap[1])) + '\n')
 							currentGapArray.pop(0)
 
 				else:
