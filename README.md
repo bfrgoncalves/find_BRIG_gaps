@@ -2,7 +2,7 @@
 
 # Usage 
 
-`find_brig_gaps.py [-h] [-x QUERYTAB] [-ib SEARCHBEGIN] [-ie SEARCHEND] [-s MINIMUMLENGTH] [-f REFERENCEFASTA] [-o RESULTSFILENAME]`
+`find_brig_gaps.py [-h] [-x QUERYTAB] [-ib SEARCHBEGIN] [-ie SEARCHEND] [-n GAPSNAME] [-s MINIMUMLENGTH] [-f REFERENCEFASTA] [-a GFFFILE] [-o RESULTSFILENAME] [-m ISMULTIPLECONTIGCOMPARISON]`
 
 # Description 
 
@@ -18,8 +18,12 @@ Arguments:
   -ib SEARCHBEGIN (Required = True)
   			Start region to start looking for gaps
 
-  -ie SEARCHEND (Required = True)
-  			End region to start looking for gaps
+  -ie GAPSNAME (Required = True)
+  			Name to give to the gaps found
+
+  -n SEARCHEND (Required = True)
+        End region to start looking for gaps
+
   
   -s MINIMUMLENGTH (Required = True) 
             Minimum gap length
@@ -27,8 +31,14 @@ Arguments:
   -f REFERENCEFASTA (Required = True)
   			.fasta file with the reference sequence to retrieve the gap sequences
 
+  -a GFFFILE (Required = False)
+        .gff file to modify with the gaps found
+
   -o RESULTSFILENAME (Required = True)
   			Name to give to the results files (.fasta and .gff)
+
+  -m ISMULTIPLECONTIGCOMPARISON (Required = True)
+        True if is a multiple contig comparison, false if not
 
 # Example of usage
 
