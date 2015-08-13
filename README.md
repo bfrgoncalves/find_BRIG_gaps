@@ -2,7 +2,7 @@
 
 # Usage 
 
-`find_brig_gaps.py [-h] [-x QUERYTAB] [-ib SEARCHBEGIN] [-ie SEARCHEND] [-n GAPSNAME] [-s MINIMUMLENGTH] [-f REFERENCEFASTA] [-a GFFFILE] [-o RESULTSFILENAME] [-m ISMULTIPLECONTIGCOMPARISON]`
+`find_brig_gaps.py [-h] [-x QUERYTAB] [-ib SEARCHBEGIN] [-ie SEARCHEND] [-n GAPSNAME] [-s MINIMUMLENGTH] [-f REFERENCEFASTA] [-a GFFFILE] [-o RESULTSFILENAME] [-m ISMULTIPLECONTIGCOMPARISON] [-c CDSONGAPS]`
 
 # Description 
 
@@ -39,6 +39,9 @@ Arguments:
 
   -m ISMULTIPLECONTIGCOMPARISON (Required = True)
         True if is a multiple contig comparison, false if not
+
+  -c CDSONGAPS (Required = False)
+        Writes a file with the CDS inside the gaps
 
 # Example of usage
 

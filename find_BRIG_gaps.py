@@ -27,6 +27,7 @@ def main():
 	parser.add_argument('-m', nargs='?', type=str, help="Is multiple Contigs file", required=True)
 	parser.add_argument('-f', nargs='?', type=str, help="fasta from sequences used as reference on BRIG", required=True)
 	parser.add_argument('-a', nargs='?', type=str, help=".gff file to change", required=False)
+	parser.add_argument('-c', nargs='?', type=str, help="write CDS on gap file", required=False)
 	parser.add_argument('-o', nargs='?', type=str, help="results folder", required=True)
 
 
@@ -41,12 +42,12 @@ def main():
 		for i in onlyfiles:
 			gapName = os.path.splitext(i)[0] + '_Gap'
 			resultsFileName = args.o + '_' + os.path.splitext(i)[0]
-			runPipeline(os.path.join(args.x,i), args.ib, args.ie, args.s, gapName, args.f, gffFile, resultsFileName, True, args.m)
+			runPipeline(os.path.join(args.x,i), args.ib, args.ie, args.s, gapName, args.f, gffFile, resultsFileName, True, args.m, args.c)
 
 		if args.a:
 			os.rename(gffName[0]+'_inter.gff', gffName[0]+'_plusGAPS.gff')
 	else:
-		runPipeline(args.x, args.ib, args.ie, args.s, args.n, args.f, args.a, args.o, False, args.m)
+		runPipeline(args.x, args.ib, args.ie, args.s, args.n, args.f, args.a, args.o, False, args.m, args.c)
 
 
 if __name__ == "__main__":

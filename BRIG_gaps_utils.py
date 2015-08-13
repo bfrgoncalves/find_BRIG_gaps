@@ -13,9 +13,11 @@ import HTSeq
 
 from datetime import datetime
 
+from CDS_on_gaps import find_CDS_on_Gaps
+from CDS_on_gaps import write_CDS_in_gap_file
 
 
-def runPipeline(x, ib, ie, s, n, f, a, o, overwrite, multipleContigs):
+def runPipeline(x, ib, ie, s, n, f, a, o, overwrite, multipleContigs, checkCDSonGAP):
 
 	if multipleContigs == 'True':
 		LineDict, arrayOfLines = importTsv_contigs(x, '\t')
@@ -43,7 +45,11 @@ def runPipeline(x, ib, ie, s, n, f, a, o, overwrite, multipleContigs):
 	writeGapFiles(o, gapArray, f, gapName)
 
 	if a:
-		changeGff(a, gapArray, gapName, overwrite)
+		fileName = changeGff(a, gapArray, gapName, overwrite)
+
+	if checkCDSonGAP == 'True':
+		cdsArray = find_CDS_on_Gaps(fileName + '_plusGAPS.gff')
+		write_CDS_in_gap_file(cdsArray, fileName)
 
 	print 'Gaps: ' + str(gaps) + '\n'
 
@@ -147,8 +153,10 @@ def getGaps_contigs(orderedTab, Ibegin, Iend, sense):
 	for i in range(0, len(orderedTab)-2):
 		if prevRefName != orderedTab[i][0]:
 			BeginOfContig = orderedTab[i][1]
+
 			prevRefName = orderedTab[i][0]
 			coveredRegion = prevContigEnd
+
 		else:
 			prevContigEnd = orderedTab[i][2]
 	
@@ -157,7 +165,8 @@ def getGaps_contigs(orderedTab, Ibegin, Iend, sense):
 		#print BeginOfContig, coveredRegion, gap
 		if float(Ibegin) <= coveredRegion and float(Iend) >= coveredRegion + gap:
 			if gap >= float(sense):
-				gaps.append((str(coveredRegion-BeginOfContig) + '--' + str(coveredRegion - BeginOfContig + gap), gap, orderedTab[i][0]))
+				if coveredRegion > BeginOfContig: #Regions which didnt align using BLAST are not classified as gaps
+					gaps.append((str(coveredRegion-BeginOfContig) + '--' + str(coveredRegion - BeginOfContig + gap), gap, orderedTab[i][0]))
 
 		if gap > 0:
 			totalGapSize += gap
@@ -294,3 +303,5 @@ def changeGff(gffFile, gapArray, gapName, overwrite):
 			os.rename(gffName[0]+'_plusGAPS.gff', gffName[0]+'_inter.gff')
 		else:
 			os.rename(gffName[0]+'_plusGAPS.gff', gffName[0]+'_inter.gff')
+
+	return gffName[0]
