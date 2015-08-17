@@ -287,11 +287,11 @@ def changeGff(gffFile, gapArray, gapName, overwrite):
 						currentGap = currentGapArray[0]
 						nextGapBegin = float(currentGap[0].split('--')[0])
 
-						if nextGapBegin > gffBegin or referenceName != currentGap[3]:
+						if nextGapBegin > gffBegin or referenceName not in currentGap[3]:
 							gapFile.write(i)
 						else:
 							countGaps += 1
-							gapFile.write(currentGap[3] + '\tRefSeq\tgap\t' + str(int(float(currentGap[0].split('--')[0]))) +'\t' + str(int(float(currentGap[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=' + gapName + str(countGaps) + ';Name=' + gapName + str(countGaps) + '_' + str(int(currentGap[1])) + '\n')
+							gapFile.write(referenceName + '\tRefSeq\tgap\t' + str(int(float(currentGap[0].split('--')[0]))) +'\t' + str(int(float(currentGap[0].split('--')[1]))) + '\t.\t.\t.\t' + 'ID=' + gapName + '_' + str(countGaps) + ';Name=' + gapName + str(countGaps) + '_' + str(int(currentGap[1])) + '\n')
 							currentGapArray.pop(0)
 
 				else:
